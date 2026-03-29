@@ -35,8 +35,6 @@ class CarInterface(CarInterfaceBase):
     cam_can = CanBus(None, fingerprint).CAM
     lka_steering = 0x50 in fingerprint[cam_can] or 0x110 in fingerprint[cam_can]
     CAN = CanBus(None, fingerprint, lka_steering)
-    if candidate == CAR.KIA_EV4:
-      CAN._a, CAN._e = 0, 0
 
     if ret.flags & HyundaiFlags.CANFD:
       # Shared configuration for CAN-FD cars
@@ -53,8 +51,7 @@ class CarInterface(CarInterfaceBase):
 
       if lka_steering:
         # detect LKA steering
-        if "EV4" not in str(candidate):
-          ret.flags |= HyundaiFlags.CANFD_LKA_STEERING.value
+        ret.flags |= HyundaiFlags.CANFD_LKA_STEERING.value
         if 0x110 in fingerprint[CAN.CAM]:
           ret.flags |= HyundaiFlags.CANFD_LKA_STEERING_ALT.value
       else:

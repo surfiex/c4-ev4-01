@@ -19,10 +19,6 @@ class CanBus(CanBusBase):
     if lka_steering:
       self._a, self._e = 0, 1
 
-    from opendbc.car.hyundai.values import CAR
-    if CP is not None and CP.carFingerprint == CAR.KIA_EV4:
-      self._a, self._e = 0, 0
-
     self._a += self.offset
     self._e += self.offset
     self._cam = 2 + self.offset
@@ -65,9 +61,6 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_torque)
     if CP.openpilotLongitudinalControl:
       ret.append(packer.make_can_msg("LFA", CAN.ECAN, lfa_values))
     ret.append(packer.make_can_msg(lkas_msg, CAN.ACAN, lkas_values))
-  elif CP.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT:
-    # EV4 specific logic: PT is Bus 0 (ECAN), expect LKAS_ALT instead of LFA
-    ret.append(packer.make_can_msg("LKAS_ALT", CAN.ECAN, lkas_values))
   else:
     ret.append(packer.make_can_msg("LFA", CAN.ECAN, lfa_values))
 
