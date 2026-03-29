@@ -154,6 +154,9 @@ class CarInterface(CarInterfaceBase):
     if candidate in (CAR.KIA_OPTIMA_H,):
       ret.dashcamOnly = True
 
+    if candidate == CAR.KIA_EV4:
+      ret.dashcamOnly = False
+
     return ret
 
   @staticmethod
