@@ -19,7 +19,8 @@ class CanBus(CanBusBase):
     if lka_steering:
       self._a, self._e = 0, 1
 
-    if CP is not None and CP.carFingerprint == "KIA EV4":
+    from opendbc.car.hyundai.values import CAR
+    if CP is not None and CP.carFingerprint == CAR.KIA_EV4:
       self._a, self._e = 0, 0
 
     self._a += self.offset
