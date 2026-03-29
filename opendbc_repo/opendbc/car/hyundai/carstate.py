@@ -220,8 +220,12 @@ class CarState(CarStateBase):
 
     ret.brakePressed = cp.vl["TCS"]["DriverBraking"] == 1
 
-    ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
-    ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      ret.doorOpen = False
+      ret.seatbeltUnlatched = False
+    else:
+      ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
+      ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
 
     gear = cp.vl[self.gear_msg_canfd]["GEAR"]
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(gear))
@@ -243,12 +247,16 @@ class CarState(CarStateBase):
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > self.params.STEER_THRESHOLD, 5)
     ret.steerFaultTemporary = cp.vl["MDPS"]["LKA_FAULT"] != 0
 
-    # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
-    left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
-    if self.CP.carFingerprint == CAR.HYUNDAI_KONA_EV_2ND_GEN:
-      left_blinker_sig, right_blinker_sig = "LEFT_LAMP_ALT", "RIGHT_LAMP_ALT"
-    ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50, cp.vl["BLINKERS"][left_blinker_sig],
-                                                                      cp.vl["BLINKERS"][right_blinker_sig])
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      ret.leftBlinker = False
+      ret.rightBlinker = False
+    else:
+      # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
+      left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
+      if self.CP.carFingerprint == CAR.HYUNDAI_KONA_EV_2ND_GEN:
+        left_blinker_sig, right_blinker_sig = "LEFT_LAMP_ALT", "RIGHT_LAMP_ALT"
+      ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50, cp.vl["BLINKERS"][left_blinker_sig],
+                                                                        cp.vl["BLINKERS"][right_blinker_sig])
     if self.CP.enableBsm:
       ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FL_INDICATOR"] != 0
       ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
