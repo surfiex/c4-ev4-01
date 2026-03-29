@@ -51,14 +51,15 @@ class CarInterface(CarInterfaceBase):
 
       if lka_steering:
         # detect LKA steering
-        ret.flags |= HyundaiFlags.CANFD_LKA_STEERING.value
+        if candidate != CAR.KIA_EV4:
+          ret.flags |= HyundaiFlags.CANFD_LKA_STEERING.value
         if 0x110 in fingerprint[CAN.CAM]:
           ret.flags |= HyundaiFlags.CANFD_LKA_STEERING_ALT.value
       else:
         # no LKA steering
         if 0x1cf not in fingerprint[CAN.ECAN]:
           ret.flags |= HyundaiFlags.CANFD_ALT_BUTTONS.value
-        if not ret.flags & HyundaiFlags.RADAR_SCC:
+        if not ret.flags & HyundaiFlags.RADAR_SCC and candidate != CAR.KIA_EV4:
           ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
 
       # Some LKA steering cars have alternative messages for gear checks

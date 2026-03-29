@@ -156,7 +156,13 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
   bool tx = true;
 
   // steering
-  const unsigned int steer_addr = (hyundai_canfd_lka_steering && !hyundai_longitudinal) ? hyundai_canfd_get_lka_addr() : 0x12aU;
+  unsigned int steer_addr = 0x12aU;
+  if (hyundai_canfd_lka_steering && !hyundai_longitudinal) {
+    steer_addr = hyundai_canfd_get_lka_addr();
+  } else if (hyundai_canfd_lka_steering_alt && !hyundai_longitudinal) {
+    steer_addr = 0x110U; // EV4 specifically requires 0x110 even though it runs in LFA mode
+  }
+
   if (msg->addr == steer_addr) {
     int desired_torque = (((msg->data[6] & 0xFU) << 7U) | (msg->data[5] >> 1U)) - 1024U;
     bool steer_req = GET_BIT(msg, 52U);
@@ -244,6 +250,8 @@ static safety_config hyundai_canfd_init(uint16_t param) {
     HYUNDAI_CANFD_CRUISE_BUTTON_TX_MSGS(2)
     HYUNDAI_CANFD_LFA_STEERING_COMMON_TX_MSGS(0)
     HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(0, false)
+    {0x110, 0, 32, .check_relay = true},  /* LKAS_ALT for EV4 */
+    {0x362, 0, 32, .check_relay = true},  /* CAM_0x362 for EV4 */
   };
 
   // ADRV_0x160 is checked for radar liveness
@@ -253,6 +261,8 @@ static safety_config hyundai_canfd_init(uint16_t param) {
     HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(0, true)
     {0x160, 0, 16, .check_relay = true}, // ADRV_0x160
     {0x7D0, 0, 8, .check_relay = false},  // tester present for radar ECU disable
+    {0x110, 0, 32, .check_relay = true},  /* LKAS_ALT for EV4 */
+    {0x362, 0, 32, .check_relay = true},  /* CAM_0x362 for EV4 */
   };
 
   // ADRV_0x160 is checked for relay malfunction
@@ -261,6 +271,8 @@ static safety_config hyundai_canfd_init(uint16_t param) {
     HYUNDAI_CANFD_LFA_STEERING_COMMON_TX_MSGS(0) \
     HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(0, (longitudinal)) \
     {0x160, 0, 16, .check_relay = (longitudinal)}, /* ADRV_0x160 */ \
+    {0x110, 0, 32, .check_relay = true},  /* LKAS_ALT for EV4 */ \
+    {0x362, 0, 32, .check_relay = true},  /* CAM_0x362 for EV4 */ \
 
   hyundai_common_init(param);
 
