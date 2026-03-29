@@ -1015,9 +1015,6 @@ FW_VERSIONS = {
     (Ecu.fwdCamera, 0x7c4, None): [
       b'\xf1\x00CT11.011.031.012551000HKP_CT125_50430099211EZ000',
     ],
-    (Ecu.eps, 0x7d4, None): [
-      b'\xf1\x00CT1 MDPS C 1.00 1.01 56300EZ000  2541_CT1kE_CAN101',
-    ],
   },
   CAR.KIA_EV6: {
     (Ecu.fwdRadar, 0x7d0, None): [
