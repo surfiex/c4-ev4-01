@@ -220,8 +220,12 @@ class CarState(CarStateBase):
 
     ret.brakePressed = cp.vl["TCS"]["DriverBraking"] == 1
 
-    ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
-    ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      ret.doorOpen = False
+      ret.seatbeltUnlatched = False
+    else:
+      ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
+      ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
 
     gear = cp.vl[self.gear_msg_canfd]["GEAR"]
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(gear))
@@ -243,12 +247,16 @@ class CarState(CarStateBase):
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > self.params.STEER_THRESHOLD, 5)
     ret.steerFaultTemporary = cp.vl["MDPS"]["LKA_FAULT"] != 0
 
-    # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
-    left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
-    if self.CP.carFingerprint == CAR.HYUNDAI_KONA_EV_2ND_GEN:
-      left_blinker_sig, right_blinker_sig = "LEFT_LAMP_ALT", "RIGHT_LAMP_ALT"
-    ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50, cp.vl["BLINKERS"][left_blinker_sig],
-                                                                      cp.vl["BLINKERS"][right_blinker_sig])
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      ret.leftBlinker = False
+      ret.rightBlinker = False
+    else:
+      # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
+      left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
+      if self.CP.carFingerprint == CAR.HYUNDAI_KONA_EV_2ND_GEN:
+        left_blinker_sig, right_blinker_sig = "LEFT_LAMP_ALT", "RIGHT_LAMP_ALT"
+      ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50, cp.vl["BLINKERS"][left_blinker_sig],
+                                                                        cp.vl["BLINKERS"][right_blinker_sig])
     if self.CP.enableBsm:
       ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FL_INDICATOR"] != 0
       ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
@@ -277,13 +285,21 @@ class CarState(CarStateBase):
     prev_cruise_buttons = self.cruise_buttons[-1]
     prev_main_buttons = self.main_buttons[-1]
     prev_lda_button = self.lda_button
-    self.cruise_buttons.extend(cp.vl_all[self.cruise_btns_msg_canfd]["CRUISE_BUTTONS"])
-    self.main_buttons.extend(cp.vl_all[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"])
+    cruise_btn_vals = cp.vl_all[self.cruise_btns_msg_canfd]["CRUISE_BUTTONS"]
+    if not cruise_btn_vals:
+      # Fallback: vl_all may be empty if checksum/counter validation rejects the message
+      cruise_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["CRUISE_BUTTONS"]]
+    self.cruise_buttons.extend(cruise_btn_vals)
+
+    main_btn_vals = cp.vl_all[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]
+    if not main_btn_vals:
+      main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
+    self.main_buttons.extend(main_btn_vals)
     self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
     ret.accFaulted = cp.vl["TCS"]["ACCEnable"] != 0  # 0 ACC CONTROL ENABLED, 1-3 ACC CONTROL DISABLED
 
-    if self.CP.flags & HyundaiFlags.CANFD_LKA_STEERING:
+    if self.CP.flags & HyundaiFlags.CANFD_LKA_STEERING or self.CP.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT:
       self.lfa_block_msg = copy.copy(cp_cam.vl["CAM_0x362"] if self.CP.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT
                                           else cp_cam.vl["CAM_0x2a4"])
 
@@ -291,7 +307,13 @@ class CarState(CarStateBase):
                         *create_button_events(self.main_buttons[-1], prev_main_buttons, {1: ButtonType.mainCruise}),
                         *create_button_events(self.lda_button, prev_lda_button, {1: ButtonType.lkas})]
 
-    ret.blockPcmEnable = not self.recent_button_interaction()
+    # On HDA2 cars like EV4, cruise is managed by the car's SCC via toggle button.
+    # Button signal encoding differs from standard on EV4, and E-CAN is bridged
+    # (not relayed), so blockPcmEnable is not needed for safety.
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      ret.blockPcmEnable = False
+    else:
+      ret.blockPcmEnable = not self.recent_button_interaction()
 
     return ret
 
@@ -302,6 +324,10 @@ class CarState(CarStateBase):
       msgs += [
         # this message is 50Hz but the ECU frequently stops transmitting for ~0.5s
         ("CRUISE_BUTTONS", 1)
+      ]
+    else:
+      msgs += [
+        ("CRUISE_BUTTONS_ALT", 1)
       ]
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], msgs, CanBus(CP).ECAN),

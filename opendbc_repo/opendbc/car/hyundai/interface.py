@@ -49,16 +49,16 @@ class CarInterface(CarInterfaceBase):
       if 0xFA in fingerprint[CAN.ECAN]:
         ret.flags |= HyundaiFlags.HYBRID.value
 
-      if lka_steering:
-        # detect LKA steering
+      if lka_steering or (ret.flags & HyundaiFlags.CANFD_LKA_STEERING):
+        # detect LKA steering (also respect statically set flag from values.py)
         ret.flags |= HyundaiFlags.CANFD_LKA_STEERING.value
-        if 0x110 in fingerprint[CAN.CAM]:
+        if 0x110 in fingerprint[CAN.CAM] or (ret.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT):
           ret.flags |= HyundaiFlags.CANFD_LKA_STEERING_ALT.value
       else:
         # no LKA steering
         if 0x1cf not in fingerprint[CAN.ECAN]:
           ret.flags |= HyundaiFlags.CANFD_ALT_BUTTONS.value
-        if not ret.flags & HyundaiFlags.RADAR_SCC:
+        if not ret.flags & HyundaiFlags.RADAR_SCC and candidate != CAR.KIA_EV4:
           ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
 
       # Some LKA steering cars have alternative messages for gear checks
@@ -76,8 +76,8 @@ class CarInterface(CarInterfaceBase):
 
       if ret.flags & HyundaiFlags.CANFD_LKA_STEERING:
         ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.CANFD_LKA_STEERING.value
-        if ret.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT:
-          ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.CANFD_LKA_STEERING_ALT.value
+      if ret.flags & HyundaiFlags.CANFD_LKA_STEERING_ALT:
+        ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.CANFD_LKA_STEERING_ALT.value
       if ret.flags & HyundaiFlags.CANFD_ALT_BUTTONS:
         ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.CANFD_ALT_BUTTONS.value
       if ret.flags & HyundaiFlags.CANFD_CAMERA_SCC:
@@ -153,6 +153,7 @@ class CarInterface(CarInterfaceBase):
     # TODO: Optima Hybrid 2017 uses a different SCC12 checksum
     if candidate in (CAR.KIA_OPTIMA_H,):
       ret.dashcamOnly = True
+
 
     return ret
 

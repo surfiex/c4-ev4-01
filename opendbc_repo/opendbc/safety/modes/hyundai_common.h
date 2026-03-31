@@ -77,7 +77,7 @@ void hyundai_common_cruise_state_check(const bool cruise_engaged) {
 
   // enter controls on rising edge of ACC and recent user button press, exit controls when ACC off
   if (!hyundai_longitudinal) {
-    if (cruise_engaged && !cruise_engaged_prev && (hyundai_last_button_interaction < HYUNDAI_PREV_BUTTON_SAMPLES)) {
+    if (cruise_engaged && !cruise_engaged_prev) {
       controls_allowed = true;
     }
 

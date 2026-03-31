@@ -1008,6 +1008,14 @@ FW_VERSIONS = {
       b'\xf1\x00UM__ SCC F-CUP      1.00 1.00 96400-C6500         ',
     ],
   },
+  CAR.KIA_EV4: {
+    (Ecu.fwdRadar, 0x7d0, None): [
+      b'\xf1\x00CT1__               1.00 1.01 99110EZ000          ',
+    ],
+    (Ecu.fwdCamera, 0x7c4, None): [
+      b'\xf1\x00CT11.011.031.012551000HKP_CT125_50430099211EZ000',
+    ],
+  },
   CAR.KIA_EV6: {
     (Ecu.fwdRadar, 0x7d0, None): [
       b'\xf1\x00CV1_ RDR -----      1.00 1.01 99110-CV000         ',

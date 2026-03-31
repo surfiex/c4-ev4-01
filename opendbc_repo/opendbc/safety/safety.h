@@ -141,8 +141,11 @@ static void update_addr_timestamp(RxCheck addr_list[], int index) {
 
 static void update_counter(RxCheck addr_list[], int index, uint8_t counter) {
   if (index != -1) {
-    uint8_t expected_counter = (addr_list[index].status.last_counter + 1U) % (addr_list[index].msg[addr_list[index].status.index].max_counter + 1U);
-    addr_list[index].status.wrong_counters += (expected_counter == counter) ? -1 : 1;
+    uint8_t max_val = addr_list[index].msg[addr_list[index].status.index].max_counter;
+    uint8_t expected_1 = (addr_list[index].status.last_counter + 1U) % (max_val + 1U);
+    uint8_t expected_2 = (addr_list[index].status.last_counter + 2U) % (max_val + 1U);
+    bool valid = (expected_1 == counter) || (expected_2 == counter);
+    addr_list[index].status.wrong_counters += valid ? -1 : 1;
     addr_list[index].status.wrong_counters = SAFETY_CLAMP(addr_list[index].status.wrong_counters, 0, MAX_WRONG_COUNTERS);
     addr_list[index].status.last_counter = counter;
   }

@@ -15,6 +15,7 @@
   HYUNDAI_CANFD_CRUISE_BUTTON_TX_MSGS(e_can)                        \
   {0x110, a_can, 32, .check_relay = (a_can) == 0},  /* LKAS_ALT */  \
   {0x362, a_can, 32, .check_relay = (a_can) == 0},  /* CAM_0x362 */ \
+  HYUNDAI_CANFD_SCC_CONTROL_COMMON_TX_MSGS(e_can, false)             \
 
 #define HYUNDAI_CANFD_LFA_STEERING_COMMON_TX_MSGS(e_can)  \
   {0x12A, e_can, 16, .check_relay = (e_can) == 0},  /* LFA */            \
@@ -156,7 +157,11 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
   bool tx = true;
 
   // steering
-  const unsigned int steer_addr = (hyundai_canfd_lka_steering && !hyundai_longitudinal) ? hyundai_canfd_get_lka_addr() : 0x12aU;
+  unsigned int steer_addr = 0x12aU;
+  if (hyundai_canfd_lka_steering && !hyundai_longitudinal) {
+    steer_addr = hyundai_canfd_get_lka_addr();
+  }
+
   if (msg->addr == steer_addr) {
     int desired_torque = (((msg->data[6] & 0xFU) << 7U) | (msg->data[5] >> 1U)) - 1024U;
     bool steer_req = GET_BIT(msg, 52U);
@@ -308,13 +313,35 @@ static safety_config hyundai_canfd_init(uint16_t param) {
     if (hyundai_canfd_lka_steering) {
       // *** LKA steering checks ***
       // E-CAN is on bus 1, SCC messages are sent on cars with ADRV ECU.
-      // Does not use the alt buttons message
       static RxCheck hyundai_canfd_lka_steering_rx_checks[] = {
         HYUNDAI_CANFD_STD_BUTTONS_RX_CHECKS(1)
         HYUNDAI_CANFD_SCC_ADDR_CHECK(1)
       };
 
-      SET_RX_CHECKS(hyundai_canfd_lka_steering_rx_checks, ret);
+      static RxCheck hyundai_canfd_lka_steering_alt_buttons_rx_checks[] = {
+        HYUNDAI_CANFD_ALT_BUTTONS_RX_CHECKS(1)
+        HYUNDAI_CANFD_SCC_ADDR_CHECK(1)
+      };
+
+      // EV4: ACCELERATOR (0x35) has non-standard counter and checksum
+      static RxCheck hyundai_canfd_lka_steering_alt_ev4_rx_checks[] = {
+        {.msg = {{0x35, 1, 32, 100U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true},
+                 {0x100, 1, 32, 100U, .max_counter = 0xffU, .ignore_quality_flag = true},
+                 {0x105, 1, 32, 100U, .max_counter = 0xffU, .ignore_quality_flag = true}}},
+        {.msg = {{0x175, 1, 24, 50U, .max_counter = 0xffU, .ignore_quality_flag = true}, { 0 }, { 0 }}},
+        {.msg = {{0xa0, 1, 24, 100U, .max_counter = 0xffU, .ignore_quality_flag = true}, { 0 }, { 0 }}},
+        {.msg = {{0xea, 1, 24, 100U, .max_counter = 0xffU, .ignore_quality_flag = true}, { 0 }, { 0 }}},
+        {.msg = {{0x1aa, 1, 16, 50U, .ignore_checksum = true, .max_counter = 0xffU, .ignore_quality_flag = true}, { 0 }, { 0 }}},
+        HYUNDAI_CANFD_SCC_ADDR_CHECK(1)
+      };
+
+      if (hyundai_canfd_alt_buttons && hyundai_canfd_lka_steering_alt) {
+        SET_RX_CHECKS(hyundai_canfd_lka_steering_alt_ev4_rx_checks, ret);
+      } else if (hyundai_canfd_alt_buttons) {
+        SET_RX_CHECKS(hyundai_canfd_lka_steering_alt_buttons_rx_checks, ret);
+      } else {
+        SET_RX_CHECKS(hyundai_canfd_lka_steering_rx_checks, ret);
+      }
       if (hyundai_canfd_lka_steering_alt) {
         SET_TX_MSGS(HYUNDAI_CANFD_LKA_STEERING_ALT_TX_MSGS, ret);
       } else {
