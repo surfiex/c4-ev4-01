@@ -36,6 +36,15 @@ def flash_panda(panda_serial: str) -> Panda:
   panda_signature = b"" if panda.bootstub else panda.get_signature()
   cloudlog.warning(f"Panda {panda_serial} connected, version: {panda_version}, signature {panda_signature.hex()[:16]}, expected {fw_signature.hex()[:16]}")
 
+  # Skip firmware flash if firmware binary is not available (dev builds)
+  fw_path = os.path.join(FW_PATH, McuType.H7.config.app_fn)
+  if not os.path.exists(fw_path):
+    cloudlog.warning(f"Firmware binary not found at {fw_path}, skipping flash (dev mode)")
+    if panda.bootstub:
+      cloudlog.error("Panda in bootstub but no firmware to flash, exiting")
+      raise AssertionError
+    return panda
+
   if panda.bootstub or panda_signature != fw_signature:
     cloudlog.info("Panda firmware out of date, update required")
     panda.flash()
