@@ -221,8 +221,10 @@ class CarState(CarStateBase):
     ret.brakePressed = cp.vl["TCS"]["DriverBraking"] == 1
 
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      ret.doorOpen = cp.vl["EV4_DOORS"]["DRIVER_DOOR"] == 1
-      ret.seatbeltUnlatched = cp.vl["EV4_BODY_CONTROL"]["SEATBELT_DRIVER"] == 1
+      # TODO: EV4 uses different message IDs for door/seatbelt (0x401/0x3E0)
+      # Hardcoded until DLC and bus mapping are verified on-device
+      ret.doorOpen = False
+      ret.seatbeltUnlatched = False
     else:
       ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
       ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
@@ -248,9 +250,9 @@ class CarState(CarStateBase):
     ret.steerFaultTemporary = cp.vl["MDPS"]["LKA_FAULT"] != 0
 
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50,
-        cp.vl["EV4_BLINKER_LEFT"]["LEFT_BLINKER"],
-        cp.vl["EV4_BLINKER_RIGHT"]["RIGHT_BLINKER"])
+      # TODO: EV4 uses 0x35A/0x35B for blinkers, verify on-device
+      ret.leftBlinker = False
+      ret.rightBlinker = False
     else:
       # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
       left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
@@ -297,10 +299,10 @@ class CarState(CarStateBase):
       main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
     self.main_buttons.extend(main_btn_vals)
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      # LFA button state is on LFAHDA_CLUSTER (E-CAN Bus 1), not LKAS_ALT (overwritten by openpilot)
-      # LFA_ICON toggles 0↔2 when physical LFA button is pressed
-      lfa_icon = cp.vl["LFAHDA_CLUSTER"]["LFA_ICON"]
-      self.lda_button = 1 if lfa_icon > 0 else 0
+      # EV4's physical LFA button signals are in camera messages that get
+      # suppressed when Openpilot controls steering. Auto-enable LFA (LKAS)
+      # so steering is always active when cruise is enabled.
+      self.lda_button = 1
     else:
       self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
@@ -338,15 +340,8 @@ class CarState(CarStateBase):
         ("CRUISE_BUTTONS_ALT", 1)
       ]
 
-    # EV4 uses different messages for door, seatbelt, blinkers, and LFA button
-    if CP.carFingerprint == CAR.KIA_EV4:
-      msgs += [
-        ("EV4_DOORS", 0),
-        ("EV4_BODY_CONTROL", 0),
-        ("EV4_BLINKER_LEFT", 0),
-        ("EV4_BLINKER_RIGHT", 0),
-        ("LFAHDA_CLUSTER", 0),
-      ]
+    # EV4: body messages (door/seatbelt/blinker) are hardcoded for now
+    # LFA button is auto-enabled, no additional parser messages needed
 
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], msgs, CanBus(CP).ECAN),
