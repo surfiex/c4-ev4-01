@@ -297,7 +297,9 @@ class CarState(CarStateBase):
       main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
     self.main_buttons.extend(main_btn_vals)
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      self.lda_button = cp_cam.vl["LKAS_ALT"]["LFA_BUTTON"]
+      # LFA button state is on CCNC_0x161 (E-CAN), not LKAS_ALT (overwritten by openpilot)
+      lfa_icon = cp.vl["CCNC_0x161"]["LFA_ICON"]
+      self.lda_button = 1 if lfa_icon > 0 else 0
     else:
       self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
@@ -342,9 +344,7 @@ class CarState(CarStateBase):
         ("EV4_BODY_CONTROL", 10),
         ("EV4_BLINKER_LEFT", 10),
         ("EV4_BLINKER_RIGHT", 10),
-      ]
-      cam_msgs += [
-        ("LKAS_ALT", 100),
+        ("CCNC_0x161", 10),
       ]
 
     return {
