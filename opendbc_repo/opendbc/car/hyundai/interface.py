@@ -129,9 +129,6 @@ class CarInterface(CarInterfaceBase):
 
     ret.radarUnavailable = RADAR_START_ADDR not in fingerprint[1] or Bus.radar not in DBC[ret.carFingerprint]
     ret.openpilotLongitudinalControl = alpha_long and ret.alphaLongitudinalAvailable
-    if candidate == CAR.KIA_EV4:
-      ret.openpilotLongitudinalControl = True
-      
     ret.pcmCruise = not ret.openpilotLongitudinalControl
     ret.startingState = True
     ret.vEgoStarting = 0.1
