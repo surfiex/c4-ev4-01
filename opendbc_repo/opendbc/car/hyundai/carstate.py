@@ -299,10 +299,10 @@ class CarState(CarStateBase):
       main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
     self.main_buttons.extend(main_btn_vals)
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      # EV4's physical LFA button signals are in camera messages that get
-      # suppressed when Openpilot controls steering. Auto-enable LFA (LKAS)
-      # so steering is always active when cruise is enabled.
-      self.lda_button = 1
+      # LFA button state is on LFAHDA_CLUSTER (E-CAN Bus 1), not LKAS_ALT
+      # LFA_ICON toggles 0↔2 when physical LFA button is pressed
+      lfa_icon = cp.vl["LFAHDA_CLUSTER"]["LFA_ICON"]
+      self.lda_button = 1 if lfa_icon > 0 else 0
     else:
       self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
@@ -341,7 +341,10 @@ class CarState(CarStateBase):
       ]
 
     # EV4: body messages (door/seatbelt/blinker) are hardcoded for now
-    # LFA button is auto-enabled, no additional parser messages needed
+    if CP.carFingerprint == CAR.KIA_EV4:
+      msgs += [
+        ("LFAHDA_CLUSTER", 0),
+      ]
 
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], msgs, CanBus(CP).ECAN),
