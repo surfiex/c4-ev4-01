@@ -297,8 +297,9 @@ class CarState(CarStateBase):
       main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
     self.main_buttons.extend(main_btn_vals)
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      # LFA button state is on CCNC_0x161 (E-CAN), not LKAS_ALT (overwritten by openpilot)
-      lfa_icon = cp.vl["CCNC_0x161"]["LFA_ICON"]
+      # LFA button state is on LFAHDA_CLUSTER (E-CAN Bus 1), not LKAS_ALT (overwritten by openpilot)
+      # LFA_ICON toggles 0↔2 when physical LFA button is pressed
+      lfa_icon = cp.vl["LFAHDA_CLUSTER"]["LFA_ICON"]
       self.lda_button = 1 if lfa_icon > 0 else 0
     else:
       self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
@@ -340,11 +341,11 @@ class CarState(CarStateBase):
     # EV4 uses different messages for door, seatbelt, blinkers, and LFA button
     if CP.carFingerprint == CAR.KIA_EV4:
       msgs += [
-        ("EV4_DOORS", 10),
-        ("EV4_BODY_CONTROL", 10),
-        ("EV4_BLINKER_LEFT", 10),
-        ("EV4_BLINKER_RIGHT", 10),
-        ("CCNC_0x161", 10),
+        ("EV4_DOORS", 0),
+        ("EV4_BODY_CONTROL", 0),
+        ("EV4_BLINKER_LEFT", 0),
+        ("EV4_BLINKER_RIGHT", 0),
+        ("LFAHDA_CLUSTER", 0),
       ]
 
     return {

@@ -910,11 +910,12 @@ BO_ 858 EV4_BLINKER_LEFT: 8 XXX
 BO_ 859 EV4_BLINKER_RIGHT: 8 XXX
  SG_ RIGHT_BLINKER : 40|1@1+ (1,0) [0|1] "" XXX
 
-BO_ 992 EV4_BODY_CONTROL: 16 XXX
+BO_ 992 EV4_BODY_CONTROL: 32 XXX
  SG_ SEATBELT_DRIVER : 89|1@1+ (1,0) [0|1] "" XXX
 
-BO_ 1025 EV4_DOORS: 16 XXX
+BO_ 1025 EV4_DOORS: 32 XXX
  SG_ DRIVER_DOOR : 88|1@1+ (1,0) [0|1] "" XXX
+
 
 CM_ SG_ 96 BRAKE_PRESSURE "User applied brake pedal pressure. Ramps from computer applied pressure on falling edge of cruise. Cruise cancels if !=0";
 CM_ SG_ 101 BRAKE_POSITION "User applied brake pedal position, max is ~700. Signed on some vehicles";
