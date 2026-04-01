@@ -221,8 +221,8 @@ class CarState(CarStateBase):
     ret.brakePressed = cp.vl["TCS"]["DriverBraking"] == 1
 
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      ret.doorOpen = False
-      ret.seatbeltUnlatched = False
+      ret.doorOpen = cp.vl["EV4_DOORS"]["DRIVER_DOOR"] == 1
+      ret.seatbeltUnlatched = cp.vl["EV4_BODY_CONTROL"]["SEATBELT_DRIVER"] == 1
     else:
       ret.doorOpen = cp.vl["DOORS_SEATBELTS"]["DRIVER_DOOR"] == 1
       ret.seatbeltUnlatched = cp.vl["DOORS_SEATBELTS"]["DRIVER_SEATBELT"] == 0
@@ -248,8 +248,9 @@ class CarState(CarStateBase):
     ret.steerFaultTemporary = cp.vl["MDPS"]["LKA_FAULT"] != 0
 
     if self.CP.carFingerprint == CAR.KIA_EV4:
-      ret.leftBlinker = False
-      ret.rightBlinker = False
+      ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50,
+        cp.vl["EV4_BLINKER_LEFT"]["LEFT_BLINKER"],
+        cp.vl["EV4_BLINKER_RIGHT"]["RIGHT_BLINKER"])
     else:
       # TODO: alt signal usage may be described by cp.vl['BLINKERS']['USE_ALT_LAMP']
       left_blinker_sig, right_blinker_sig = "LEFT_LAMP", "RIGHT_LAMP"
@@ -295,7 +296,10 @@ class CarState(CarStateBase):
     if not main_btn_vals:
       main_btn_vals = [cp.vl[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]]
     self.main_buttons.extend(main_btn_vals)
-    self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
+    if self.CP.carFingerprint == CAR.KIA_EV4:
+      self.lda_button = cp_cam.vl["LKAS_ALT"]["LFA_BUTTON"]
+    else:
+      self.lda_button = cp.vl[self.cruise_btns_msg_canfd]["LDA_BTN"]
     self.buttons_counter = cp.vl[self.cruise_btns_msg_canfd]["COUNTER"]
     ret.accFaulted = cp.vl["TCS"]["ACCEnable"] != 0  # 0 ACC CONTROL ENABLED, 1-3 ACC CONTROL DISABLED
 
@@ -319,6 +323,7 @@ class CarState(CarStateBase):
 
   def get_can_parsers_canfd(self, CP):
     msgs = []
+    cam_msgs = []
     if not (CP.flags & HyundaiFlags.CANFD_ALT_BUTTONS):
       # TODO: this can be removed once we add dynamic support to vl_all
       msgs += [
@@ -329,9 +334,22 @@ class CarState(CarStateBase):
       msgs += [
         ("CRUISE_BUTTONS_ALT", 1)
       ]
+
+    # EV4 uses different messages for door, seatbelt, blinkers, and LFA button
+    if CP.carFingerprint == CAR.KIA_EV4:
+      msgs += [
+        ("EV4_DOORS", 10),
+        ("EV4_BODY_CONTROL", 10),
+        ("EV4_BLINKER_LEFT", 10),
+        ("EV4_BLINKER_RIGHT", 10),
+      ]
+      cam_msgs += [
+        ("LKAS_ALT", 100),
+      ]
+
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], msgs, CanBus(CP).ECAN),
-      Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], CanBus(CP).CAM),
+      Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], cam_msgs, CanBus(CP).CAM),
     }
 
   def get_can_parsers(self, CP):

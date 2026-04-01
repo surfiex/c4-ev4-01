@@ -902,6 +902,20 @@ BO_ 1264 LOCAL_TIME: 8 XXX
  SG_ MINUTES : 21|6@0+ (1,0) [0|63] "" XXX
  SG_ SECONDS : 31|8@0+ (1,0) [0|59] "" XXX
 
+CM_ "EV4-specific messages discovered via CAN bus scan - these differ from standard Hyundai CAN-FD";
+
+BO_ 858 EV4_BLINKER_LEFT: 8 XXX
+ SG_ LEFT_BLINKER : 40|1@1+ (1,0) [0|1] "" XXX
+
+BO_ 859 EV4_BLINKER_RIGHT: 8 XXX
+ SG_ RIGHT_BLINKER : 40|1@1+ (1,0) [0|1] "" XXX
+
+BO_ 992 EV4_BODY_CONTROL: 16 XXX
+ SG_ SEATBELT_DRIVER : 89|1@1+ (1,0) [0|1] "" XXX
+
+BO_ 1025 EV4_DOORS: 16 XXX
+ SG_ DRIVER_DOOR : 88|1@1+ (1,0) [0|1] "" XXX
+
 CM_ SG_ 96 BRAKE_PRESSURE "User applied brake pedal pressure. Ramps from computer applied pressure on falling edge of cruise. Cruise cancels if !=0";
 CM_ SG_ 101 BRAKE_POSITION "User applied brake pedal position, max is ~700. Signed on some vehicles";
 CM_ SG_ 203 ADAS_ActvACISta "ADAS Active AngleControlInterface State";
